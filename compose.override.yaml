@@ -21,6 +21,8 @@ services:
       MERCURE_EXTRA_DIRECTIVES: demo
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-develop}"
+      # Nome del server in PhpStorm (Settings > PHP > Servers) per i path mapping
+      PHP_IDE_CONFIG: "serverName=erp-sync"
       APP_ENV: "${APP_ENV:-dev}"
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
