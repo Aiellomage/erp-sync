@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dev-only APP_SECRET committed by the Symfony recipe; production uses a real environment variable"
+paths = ['''\.env\.dev$''']
