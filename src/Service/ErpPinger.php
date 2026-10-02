@@ -16,6 +16,6 @@ class ErpPinger
 
     public function ping(): array
     {
-        return  $this->client->ping();
-        }
+        return $this->client->ping();
+    }
 }
