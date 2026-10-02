@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use DateTimeImmutable;
-use DateTimeZone;
+use App\Erp\ErpClientInterface;
 
 class ErpPinger
 {
 
+
+    public function __construct(private readonly ErpClientInterface $client)
+    {
+    }
+
     public function ping(): array
     {
-        return ['erp' => 'fake-erp', 'status' => 'ok', 'checked_at' => new DateTimeImmutable('now', new DateTimeZone('UTC'))->format(DATE_ATOM)];
-    }
+        return  $this->client->ping();
+        }
 }
