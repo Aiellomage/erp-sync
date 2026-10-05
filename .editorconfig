@@ -17,7 +17,7 @@ indent_style = tab
 [Makefile]
 indent_style = tab
 
-[{compose.*yaml,.devcontainer/compose.*yaml,.github/**/*.yaml}]
+[{compose.*yaml,.devcontainer/compose.*yaml,.github/**/*.yaml,.github/**/*.json}]
 indent_size = 2
 
 [**.md]
