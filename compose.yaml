@@ -41,6 +41,8 @@ services:
 ###> doctrine/doctrine-bundle ###
   database:
     image: mariadb:${MARIADB_VERSION:-11.4}
+    # Restart with Docker like php, otherwise php loops waiting for the database
+    restart: unless-stopped
     environment:
       MARIADB_DATABASE: ${MARIADB_DATABASE:-app}
       # You should definitely change the passwords in production
