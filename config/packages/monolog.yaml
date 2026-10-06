@@ -1,6 +1,7 @@
 monolog:
     channels: # To see all channels, run bin/console debug:autowiring logger
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        - erp # Calls to the ERP, logged to their own file
 
 when@dev:
     monolog:
@@ -9,7 +10,12 @@ when@dev:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
-                channels: ["!event"]
+                channels: ["!event", "!erp"]
+            erp:
+                type: stream
+                path: "%kernel.logs_dir%/erp.log"
+                level: debug
+                channels: ["erp"]
             console:
                 type: console
                 process_psr_3_messages: false

@@ -14,9 +14,8 @@ class LoggingErpClient implements ErpClientInterface
     public function __construct(
         #[AutowireDecorated]
         private readonly ErpClientInterface $inner,
-        private readonly LoggerInterface    $logger
-    )
-    {
+        private readonly LoggerInterface $erpLogger,
+    ) {
     }
 
     public function ping(): array
@@ -24,7 +23,7 @@ class LoggingErpClient implements ErpClientInterface
         $start = hrtime(true);
         $result = $this->inner->ping();
         $durationMs = round((hrtime(true) - $start) / 1000000, 2);
-        $this->logger->info('ERP ping in {duration_ms} ms', ['duration_ms' => $durationMs]);
+        $this->erpLogger->info('ERP ping in {duration_ms} ms', ['duration_ms' => $durationMs]);
         return $result;
     }
 }
