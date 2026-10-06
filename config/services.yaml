@@ -22,3 +22,15 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # Same class as App\Erp\HttpErpClient, configured with different base URLs
+    # (the equivalent of a Magento virtualType)
+    app.erp.catalog_client:
+        class: App\Erp\HttpErpClient
+        arguments:
+            $baseUrl: '%env(ERP_CATALOG_URL)%'
+
+    app.erp.stock_client:
+        class: App\Erp\HttpErpClient
+        arguments:
+            $baseUrl: '%env(ERP_STOCK_URL)%'
