@@ -4,25 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-
+use App\Service\ErpPinger;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Service\ErpPinger;
 
 class PingController extends AbstractController
 {
-    private ErpPinger $erpPinger;
-
-    public function __construct(ErpPinger $erpPinger)
-    {
-        $this->erpPinger = $erpPinger;
+    public function __construct(
+        private readonly ErpPinger $erpPinger,
+    ) {
     }
 
     #[Route('/api/ping', name: 'api_ping', methods: ['GET'])]
     public function ping(): Response
     {
-        $pinger = $this->erpPinger->ping();
-        return $this->json($pinger);
+        return $this->json($this->erpPinger->ping());
     }
 }
