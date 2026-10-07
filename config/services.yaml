@@ -34,3 +34,8 @@ services:
         class: App\Erp\HttpErpClient
         arguments:
             $baseUrl: '%env(ERP_STOCK_URL)%'
+
+    # Named autowiring aliases: an ErpClientInterface argument called
+    # $catalogClient or $stockClient receives the matching service above
+    App\Erp\ErpClientInterface $catalogClient: '@app.erp.catalog_client'
+    App\Erp\ErpClientInterface $stockClient: '@app.erp.stock_client'
