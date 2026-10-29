@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Erp;
 
+use App\Erp\Dto\ErpProduct;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class HttpErpClient implements ErpClientInterface
@@ -16,5 +17,13 @@ class HttpErpClient implements ErpClientInterface
     public function ping(): array
     {
         return ['erp' => 'http-erp', 'status' => 'ok', 'base_url' => $this->baseUrl];
+    }
+
+    /** @return list<ErpProduct> */
+    public function fetchProducts(): array
+    {
+
+       
+        return [];// TODO: Implement fetchProducts() method.
     }
 }
