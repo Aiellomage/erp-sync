@@ -28,7 +28,11 @@ services:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
     tty: true
-###> symfony/mercure-bundle ###
+    networks:
+      - default
+      - magento
+
+  ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
 ###> doctrine/doctrine-bundle ###
@@ -37,3 +41,8 @@ services:
       # 3307 sull'host: la 3306 la usa Magento
       - "3307:3306"
 ###< doctrine/doctrine-bundle ###
+networks:
+  magento:
+    name: magento2_default
+    external: true
+
