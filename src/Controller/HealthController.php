@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Health\HealthChecker;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,6 +15,10 @@ class HealthController extends AbstractController
 {
     public function __construct(
         private readonly HealthChecker $healthChecker,
+        #[Autowire(env: 'APP_VERSION')]
+        private readonly string $appVersion,
+        #[Autowire(env: 'APP_COMMIT')]
+        private readonly string $appCommit,
     ) {
     }
 
@@ -24,7 +29,12 @@ class HealthController extends AbstractController
         $healthy = !in_array(false, $results, true);
 
         return $this->json(
-            ['status' => $healthy ? 'ok' : 'error', 'checks' => $results],
+            [
+                'status' => $healthy ? 'ok' : 'error',
+                'version' => $this->appVersion,
+                'commit' => $this->appCommit,
+                'checks' => $results,
+            ],
             $healthy ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE,
         );
     }
