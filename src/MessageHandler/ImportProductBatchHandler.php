@@ -48,6 +48,8 @@ final readonly class ImportProductBatchHandler
         }
 
         $this->em->flush();
+        $this->em->clear();
+
         $this->erpLogger->info('ImportProductBatch: {created} created, {updated} updated', [
             'created' => $created,
             'updated' => $updated,
