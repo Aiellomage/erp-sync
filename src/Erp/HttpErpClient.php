@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Erp;
 
 use App\Erp\Dto\ErpProduct;
+use DateTimeImmutable;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class HttpErpClient implements ErpClientInterface
@@ -20,7 +21,7 @@ class HttpErpClient implements ErpClientInterface
     }
 
     /** @return list<ErpProduct> */
-    public function fetchProducts(): array
+    public function fetchProducts(?DateTimeImmutable $since = null): array
     {
 
        

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Erp;
 
 use App\Erp\Dto\ErpProduct;
+use DateTimeImmutable;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Psr\Log\LoggerInterface;
@@ -29,12 +30,13 @@ class LoggingErpClient implements ErpClientInterface
     }
 
     /** @return list<ErpProduct> */
-    public function fetchProducts(): array
+    public function fetchProducts(?DateTimeImmutable $since = null): array
     {
         $start = hrtime(true);
-        $result = $this->inner->fetchProducts();
+        $result = $this->inner->fetchProducts($since);
         $durationMs = round((hrtime(true) - $start) / 1000000, 2);
-        $this->erpLogger->info('ERP fetchProducts: {count} products in {duration_ms} ms', [
+        $this->erpLogger->info('ERP fetchProducts since {since}: {count} products in {duration_ms} ms', [
+    'since' => $since?->format(DATE_ATOM) ?? 'always',
     'count' => count($result),
     'duration_ms' => $durationMs,
 ]);
