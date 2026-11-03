@@ -23,6 +23,7 @@ final class ErpProductData
 
     #[SerializedName('updated_at')]
     #[Assert\NotBlank(message: 'Update date is required')]
+    #[Assert\DateTime(format: \DATE_ATOM, message: 'Update date {{ value }} is not a valid date')]
     public ?string $updatedAt = null;
 
 }

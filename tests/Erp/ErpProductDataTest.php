@@ -98,4 +98,36 @@ final class ErpProductDataTest extends KernelTestCase
         yield 'space' => ['TSHIRT 001', 'SKU "TSHIRT 001" has invalid characters'];
         yield 'too long' => [str_repeat('A', 65), 'This value is too long. It should have 64 characters or less.'];
     }
+
+    #[DataProvider('dates')]
+    public function testTheUpdateDateMustBeAnAtomDate(string $date, ?string $expectedError): void
+    {
+        $product = new ErpProductData();
+        $product->sku = 'TSHIRT-001';
+        $product->name = 'White T-shirt';
+        $product->price = '19.90';
+        $product->updatedAt = $date;
+
+        $violations = self::getContainer()->get(ValidatorInterface::class)->validate($product);
+
+        if ($expectedError === null) {
+            self::assertCount(0, $violations, (string) $violations);
+
+            return;
+        }
+        self::assertCount(1, $violations, (string) $violations);
+        self::assertSame($expectedError, $violations[0]->getMessage());
+    }
+
+    /**
+     * @return iterable<string, array{string, ?string}>
+     */
+    public static function dates(): iterable
+    {
+        yield 'ATOM' => ['2026-10-01T09:00:00+00:00', null];
+        yield 'other offset' => ['2026-10-01T11:00:00+02:00', null];
+        yield 'not a date' => ['yesterday-ish', 'Update date "yesterday-ish" is not a valid date'];
+        yield 'month 21' => ['2026-21-01T09:00:00+00:00', 'Update date "2026-21-01T09:00:00+00:00" is not a valid date'];
+        yield 'date only' => ['2026-10-01', 'Update date "2026-10-01" is not a valid date'];
+    }
 }
