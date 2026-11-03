@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Erp;
 
 use App\Erp\Dto\ErpProductData;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -31,5 +32,38 @@ final class ErpProductDataTest extends KernelTestCase
         self::assertCount(1, $violations);
         self::assertSame('price', $violations[0]->getPropertyPath());
         self::assertSame('Price is required', $violations[0]->getMessage());
+    }
+
+    #[DataProvider('prices')]
+    public function testThePriceMustBeAPositiveDecimal(string $price, ?string $expectedError): void
+    {
+        $product = new ErpProductData();
+        $product->sku = 'TSHIRT-001';
+        $product->name = 'White T-shirt';
+        $product->price = $price;
+        $product->updatedAt = '2026-10-01T09:00:00+00:00';
+
+        $violations = self::getContainer()->get(ValidatorInterface::class)->validate($product);
+
+        if ($expectedError === null) {
+            self::assertCount(0, $violations, (string) $violations);
+
+            return;
+        }
+        self::assertCount(1, $violations);
+        self::assertSame($expectedError, $violations[0]->getMessage());
+    }
+
+    /**
+     * @return iterable<string, array{string, ?string}>
+     */
+    public static function prices(): iterable
+    {
+        yield 'decimal' => ['19.90', null];
+        yield 'integer' => ['59', null];
+        yield 'one decimal' => ['12.5', null];
+        yield 'negative' => ['-10', 'Price "-10" must be a decimal >= 0'];
+        yield 'comma' => ['19,90', 'Price "19,90" must be a decimal >= 0'];
+        yield 'three decimals' => ['19.999', 'Price "19.999" must be a decimal >= 0'];
     }
 }

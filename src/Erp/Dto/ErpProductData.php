@@ -14,6 +14,8 @@ final class ErpProductData
     public ?string $name = null;
 
     #[Assert\NotBlank(message: 'Price is required')]
+    #[Assert\Regex('/^\d+(\.\d{1,2})?$/', message: 'Price {{ value }} must be a decimal >= 0')]
+
     public ?string $price = null;
 
     #[SerializedName('updated_at')]
