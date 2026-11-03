@@ -66,4 +66,36 @@ final class ErpProductDataTest extends KernelTestCase
         yield 'comma' => ['19,90', 'Price "19,90" must be a decimal >= 0'];
         yield 'three decimals' => ['19.999', 'Price "19.999" must be a decimal >= 0'];
     }
+
+    #[DataProvider('skus')]
+    public function testTheSkuMustBeUppercaseLettersDigitsAndDashes(string $sku, ?string $expectedError): void
+    {
+        $product = new ErpProductData();
+        $product->sku = $sku;
+        $product->name = 'White T-shirt';
+        $product->price = '19.90';
+        $product->updatedAt = '2026-10-01T09:00:00+00:00';
+
+        $violations = self::getContainer()->get(ValidatorInterface::class)->validate($product);
+
+        if ($expectedError === null) {
+            self::assertCount(0, $violations, (string) $violations);
+
+            return;
+        }
+        self::assertCount(1, $violations, (string) $violations);
+        self::assertSame($expectedError, $violations[0]->getMessage());
+    }
+
+    /**
+     * @return iterable<string, array{string, ?string}>
+     */
+    public static function skus(): iterable
+    {
+        yield 'valid' => ['TSHIRT-001', null];
+        yield 'digits only' => ['12345', null];
+        yield 'lowercase' => ['tshirt-001', 'SKU "tshirt-001" has invalid characters'];
+        yield 'space' => ['TSHIRT 001', 'SKU "TSHIRT 001" has invalid characters'];
+        yield 'too long' => [str_repeat('A', 65), 'This value is too long. It should have 64 characters or less.'];
+    }
 }
