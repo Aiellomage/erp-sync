@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Erp;
 
-use App\Erp\Dto\ErpProduct;
+use App\Erp\Dto\ErpProductData;
 use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
@@ -35,7 +35,7 @@ class LoggingErpClient implements ErpClientInterface
         return $result;
     }
 
-    /** @return list<ErpProduct> */
+    /** @return list<ErpProductData> */
     public function fetchProducts(?DateTimeImmutable $since = null): array
     {
         $start = hrtime(true);

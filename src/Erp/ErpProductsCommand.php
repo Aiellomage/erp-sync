@@ -18,6 +18,7 @@ class ErpProductsCommand
     public function __construct(
         private readonly ErpClientInterface $erpClient,
         private readonly MessageBusInterface $bus,
+        private readonly ErpProductFilter $filter,
     ) {
     }
 
@@ -40,6 +41,14 @@ class ErpProductsCommand
 
             return Command::FAILURE;
         }
+
+        // Only valid products are listed and imported (they become ErpProduct)
+        $filtered = $this->filter->filter($products);
+        $products = $filtered->valid;
+        if ([] !== $filtered->rejected) {
+            $io->warning(sprintf('%d invalid products skipped (see var/log/erp.log)', count($filtered->rejected)));
+        }
+
         $batches = array_chunk($products, $batchSize);
 
         foreach ($batches as $index => $batch) {

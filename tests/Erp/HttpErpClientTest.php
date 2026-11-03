@@ -4,23 +4,25 @@ declare(strict_types=1);
 
 namespace App\Tests\Erp;
 
+use App\Erp\Dto\ErpProductData;
 use App\Erp\Exception\PermanentErpException;
 use App\Erp\Exception\TransientErpException;
 use App\Erp\HttpErpClient;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 /**
- * Unit test: no server, no network. MockHttpClient plays the ERP and returns
- * the responses we prepare, so every error case is fast and repeatable.
+ * No server, no network: MockHttpClient plays the ERP and returns the responses we prepare.
+ * The Serializer is the real one from the container (it needs the #[SerializedName] metadata).
  */
-final class HttpErpClientTest extends TestCase
+final class HttpErpClientTest extends KernelTestCase
 {
     private const BASE_URI = 'https://erp.test/api/';
 
-    public function testItTurnsTheJsonIntoErpProducts(): void
+    public function testItTurnsTheJsonIntoErpProductData(): void
     {
         $client = $this->clientReturning(new MockResponse(json_encode(['products' => [
             ['sku' => 'TSHIRT-001', 'name' => 'White T-shirt', 'price' => '19.90', 'updated_at' => '2026-10-01T09:00:00+00:00'],
@@ -30,9 +32,24 @@ final class HttpErpClientTest extends TestCase
         $products = $client->fetchProducts();
 
         self::assertCount(2, $products);
+        self::assertContainsOnlyInstancesOf(ErpProductData::class, $products);
         self::assertSame('TSHIRT-001', $products[0]->sku);
         self::assertSame('19.90', $products[0]->price);
-        self::assertSame('2026-11-02T18:15:00+00:00', $products[1]->updatedAt->format(DATE_ATOM));
+        self::assertSame('2026-11-02T18:15:00+00:00', $products[1]->updatedAt);
+    }
+
+    public function testABrokenRecordIsReturnedAsItIsForTheValidator(): void
+    {
+        // Policy B: no exception here, ErpProductFilter will reject these records
+        $client = $this->clientReturning(new MockResponse(json_encode(['products' => [
+            ['sku' => 'TSHIRT-002', 'name' => 'Black T-shirt', 'updated_at' => '2026-10-15T09:00:00+00:00'],
+            ['sku' => 'TSHIRT-003', 'name' => 'Grey T-shirt', 'price' => '19.90', 'updated_at' => 'yesterday-ish'],
+        ]])));
+
+        $products = $client->fetchProducts();
+
+        self::assertNull($products[0]->price);
+        self::assertSame('yesterday-ish', $products[1]->updatedAt);
     }
 
     public function testItSendsSinceAsAQueryParameter(): void
@@ -74,16 +91,17 @@ final class HttpErpClientTest extends TestCase
         yield '404' => [new MockResponse('', ['http_code' => 404]), PermanentErpException::class];
         yield 'invalid JSON' => [new MockResponse('{"products": ['), PermanentErpException::class];
         yield 'no products list' => [new MockResponse('{"items": []}'), PermanentErpException::class];
-        yield 'missing price' => [new MockResponse(json_encode(['products' => [
-            ['sku' => 'TSHIRT-002', 'name' => 'Black T-shirt', 'updated_at' => '2026-10-15T09:00:00+00:00'],
+        // A different type is a changed format, not a dirty value: the whole call stops
+        yield 'price as a number' => [new MockResponse(json_encode(['products' => [
+            ['sku' => 'TSHIRT-002', 'name' => 'Black T-shirt', 'price' => 19.9, 'updated_at' => '2026-10-15T09:00:00+00:00'],
         ]])), PermanentErpException::class];
-        yield 'invalid date' => [new MockResponse(json_encode(['products' => [
-            ['sku' => 'TSHIRT-002', 'name' => 'Black T-shirt', 'price' => '19.90', 'updated_at' => 'yesterday-ish'],
-        ]])), PermanentErpException::class];
+        yield 'record not an object' => [new MockResponse('{"products": ["TSHIRT-002"]}'), PermanentErpException::class];
     }
 
     private function clientReturning(MockResponse $response): HttpErpClient
     {
-        return new HttpErpClient(new MockHttpClient($response, self::BASE_URI), self::BASE_URI);
+        $denormalizer = self::getContainer()->get(DenormalizerInterface::class);
+
+        return new HttpErpClient(new MockHttpClient($response, self::BASE_URI), self::BASE_URI, $denormalizer);
     }
 }

@@ -15,14 +15,19 @@ use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
+use App\Erp\Dto\ErpProductData;
+use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerExceptionInterface;
 
 class HttpErpClient implements ErpClientInterface
 {
     public function __construct(
-        private readonly HttpClientInterface $erpClient,
+        private readonly HttpClientInterface   $erpClient,
         #[Autowire(env: 'ERP_BASE_URL')]
-        private readonly string $baseUrl,
-    ) {
+        private readonly string                $baseUrl,
+        private readonly DenormalizerInterface $denormalizer,
+    )
+    {
     }
 
     public function ping(): array
@@ -46,9 +51,9 @@ class HttpErpClient implements ErpClientInterface
             // Bad URL or option in this request. It implements TransportExceptionInterface too:
             // caught first because it is not transient. (A bad base_uri fails earlier, when the
             // container builds erp.client.)
-            throw new PermanentErpException('Invalid ERP request: '.$e->getMessage(), previous: $e);
+            throw new PermanentErpException('Invalid ERP request: ' . $e->getMessage(), previous: $e);
         } catch (TransportExceptionInterface $e) {
-            throw new TransientErpException('ERP unreachable: '.$e->getMessage(), previous: $e);
+            throw new TransientErpException('ERP unreachable: ' . $e->getMessage(), previous: $e);
         } catch (ServerExceptionInterface $e) {
             throw new TransientErpException(sprintf('ERP server error %d', $e->getResponse()->getStatusCode()), previous: $e);
         } catch (ClientExceptionInterface $e) {
@@ -59,7 +64,7 @@ class HttpErpClient implements ErpClientInterface
 
             throw new PermanentErpException(sprintf('ERP rejected the request with %d', $status), previous: $e);
         } catch (DecodingExceptionInterface $e) {
-            throw new PermanentErpException('ERP returned invalid JSON: '.$e->getMessage(), previous: $e);
+            throw new PermanentErpException('ERP returned invalid JSON: ' . $e->getMessage(), previous: $e);
         }
 
         if (!isset($data['products']) || !is_array($data['products'])) {
@@ -68,29 +73,28 @@ class HttpErpClient implements ErpClientInterface
 
         $products = [];
         foreach ($data['products'] as $index => $p) {
-            $products[] = $this->toProduct($p, $index);
+            $products[] = $this->toProductData($p, $index);
         }
 
         return $products;
     }
 
+
     /**
-     * Checks the shape of one product (the contract), not its business rules: those are the Validator's job.
+     * A record becomes ErpProductData even if fields are missing: the Validator will reject it.
+     * Only a record of the wrong type (not an object, a number instead of a string) breaks the contract.
      */
-    private function toProduct(mixed $p, int|string $index): ErpProduct
+    private function toProductData(mixed $p, int|string $index): ErpProductData
     {
-        foreach (['sku', 'name', 'price', 'updated_at'] as $field) {
-            if (!is_array($p) || !array_key_exists($field, $p) || !is_string($p[$field])) {
-                throw new PermanentErpException(sprintf('ERP contract broken: product #%s has no valid "%s"', $index, $field));
-            }
+        if (!is_array($p)) {
+            throw new PermanentErpException(sprintf('ERP contract broken: product #%s is not an object', $index));
         }
 
         try {
-            $updatedAt = new DateTimeImmutable($p['updated_at']);
-        } catch (\Exception $e) {
-            throw new PermanentErpException(sprintf('ERP contract broken: product #%s has an invalid "updated_at" ("%s")', $index, $p['updated_at']), previous: $e);
+            return $this->denormalizer->denormalize($p, ErpProductData::class);
+        } catch (SerializerExceptionInterface $e) {
+            throw new PermanentErpException(sprintf('ERP contract broken: product #%s: %s', $index, $e->getMessage()), previous: $e);
         }
-
-        return new ErpProduct($p['sku'], $p['name'], $p['price'], $updatedAt);
     }
+
 }

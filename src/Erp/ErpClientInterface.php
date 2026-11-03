@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Erp;
 
-use App\Erp\Dto\ErpProduct;
+use App\Erp\Dto\ErpProductData;
 use DateTimeImmutable;
 
 interface ErpClientInterface
@@ -13,7 +13,7 @@ interface ErpClientInterface
     /**
      * Prodotti modificati dopo $since; tutti se $since è null.
      *
-     * @return list<ErpProduct>
+     * @return list<ErpProductData>
      */
     public function fetchProducts(?DateTimeImmutable $since = null): array;
 

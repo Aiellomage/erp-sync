@@ -26,6 +26,7 @@ class SyncCatalogCommand
         private readonly ErpClientInterface $erpClient,
         private readonly MessageBusInterface $bus,
         private readonly SyncStateRepository $syncState,
+        private readonly ErpProductFilter $filter,
     ) {
     }
 
@@ -37,8 +38,16 @@ class SyncCatalogCommand
         #[Option(description: 'Number of products per ImportProductBatch message')]
         int $batchSize = 100,
         #[Option(description: 'Show what would be dispatched without dispatching it')]
-        bool $dryRun = false): int
+        bool $dryRun = false,
+        #[Option(description: 'Invalid products tolerated: they are skipped; above this number nothing is dispatched')]
+        int $allowedErrors = 10): int
     {
+        if ($allowedErrors < 0) {
+            $io->error('--allowed-errors cannot be negative');
+
+            return Command::INVALID;
+        }
+
         if ($batchSize < 1) {
             $io->error('--batch-size must be at least 1');
 
@@ -73,7 +82,7 @@ class SyncCatalogCommand
         // The ERP client only says what happened; here we decide what to do about it.
         // The last run date is not saved on failure, so the next run asks for the same products.
         try {
-            $products = $this->erpClient->fetchProducts($sinceDate);
+            $records = $this->erpClient->fetchProducts($sinceDate);
         } catch (TransientErpException $e) {
             $io->warning(['ERP temporarily unavailable, nothing synced.', $e->getMessage(), 'Last run date unchanged: the next run retries the same products.']);
 
@@ -83,6 +92,31 @@ class SyncCatalogCommand
 
             return Command::FAILURE;
         }
+
+        // Policy B: invalid products are skipped and reported; too many of them means
+        // something bigger is wrong (a changed format?), so nothing goes on.
+        $filtered = $this->filter->filter($records);
+        $products = $filtered->valid;
+
+        if ([] !== $filtered->rejected) {
+            $io->section(sprintf('%d invalid products skipped', count($filtered->rejected)));
+            $rows = [];
+            foreach ($filtered->rejected as $rejected) {
+                $rows[] = [$rejected->index, $rejected->sku ?: '(no SKU)', implode("\n", $rejected->reasons)];
+            }
+            $io->table(['#', 'SKU', 'Reasons'], $rows);
+
+            if (count($filtered->rejected) > $allowedErrors) {
+                $io->error(sprintf(
+                    '%d invalid products, more than --allowed-errors=%d: nothing dispatched. Last run date unchanged.',
+                    count($filtered->rejected),
+                    $allowedErrors,
+                ));
+
+                return Command::FAILURE;
+            }
+        }
+
         if ([] === $products) {
             if (!$dryRun) {
                 $this->syncState->saveLastRunAt(self::SYNC_NAME, $startedAt);

@@ -47,7 +47,7 @@ final readonly class ErpProductFilter
 
             $this->erpLogger->warning('Rejected ERP product #{index} ({sku}): {reasons}', [
                 'index' => $index,
-                'sku' => $data->sku ?? 'no SKU',
+                'sku' => $data->sku ?: 'no SKU',
                 'reasons' => implode('; ', $reasons),
             ]);
         }
