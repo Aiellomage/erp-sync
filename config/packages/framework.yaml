@@ -7,9 +7,28 @@ framework:
 
     #esi: true
     #fragments: true
+    http_client:
+        scoped_clients:
+            erp.client:
+                base_uri: '%env(ERP_BASE_URL)%'
+                timeout: 3                      # secondi di attesa senza ricevere dati
+                headers:
+                    Accept: 'application/json'
+                retry_failed:
+                    max_retries: 3
+                    delay: 500                  # ms prima del 1° retry
+                    multiplier: 2               # poi 1000, 2000: attesa crescente
+                    http_codes: [ 429, 500, 502, 503, 504 ]
 
 when@test:
     framework:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+when@dev:
+    framework:
+        http_client:
+            scoped_clients:
+                erp.client:
+                    verify_peer: false          # certificato locale di Caddy: MAI in produzione
+                    verify_host: false

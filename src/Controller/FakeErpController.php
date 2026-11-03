@@ -11,7 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 final class FakeErpController extends AbstractController
 {
-    #[Route('/fake-erp/catalog/products', methods: ['GET'])]
+
+    #[Route('/fake-erp/catalog/products', methods: ['GET'], env: 'dev')]
     public function products(Request $request): Response
     {
         $since = $request->query->get('since');
