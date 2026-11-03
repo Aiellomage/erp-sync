@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Erp;
 
+use App\Erp\Exception\ErpException;
 use App\Message\ImportProductBatch;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -32,7 +33,13 @@ class ErpProductsCommand
             return Command::INVALID;
         }
 
-        $products = $this->erpClient->fetchProducts();
+        try {
+            $products = $this->erpClient->fetchProducts();
+        } catch (ErpException $e) {
+            $io->error(['Cannot read the products from the ERP.', $e->getMessage()]);
+
+            return Command::FAILURE;
+        }
         $batches = array_chunk($products, $batchSize);
 
         foreach ($batches as $index => $batch) {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Erp;
 
+use App\Erp\Exception\PermanentErpException;
+use App\Erp\Exception\TransientErpException;
 use App\Message\ImportProductBatch;
 use App\Repository\SyncStateRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -16,6 +18,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
 class SyncCatalogCommand
 {
     private const SYNC_NAME = 'catalog';
+
+    /** sysexits.h EX_TEMPFAIL: temporary failure, the caller (cron, supervisor) may retry later */
+    public const EXIT_TEMPFAIL = 75;
 
     public function __construct(
         private readonly ErpClientInterface $erpClient,
@@ -65,7 +70,19 @@ class SyncCatalogCommand
             ? 'Full catalog sync'
             : sprintf('Catalog sync since %s', $sinceDate->format(DATE_ATOM)));
 
-        $products = $this->erpClient->fetchProducts($sinceDate);
+        // The ERP client only says what happened; here we decide what to do about it.
+        // The last run date is not saved on failure, so the next run asks for the same products.
+        try {
+            $products = $this->erpClient->fetchProducts($sinceDate);
+        } catch (TransientErpException $e) {
+            $io->warning(['ERP temporarily unavailable, nothing synced.', $e->getMessage(), 'Last run date unchanged: the next run retries the same products.']);
+
+            return self::EXIT_TEMPFAIL;
+        } catch (PermanentErpException $e) {
+            $io->error(['ERP sync failed and will not recover by itself.', $e->getMessage()]);
+
+            return Command::FAILURE;
+        }
         if ([] === $products) {
             if (!$dryRun) {
                 $this->syncState->saveLastRunAt(self::SYNC_NAME, $startedAt);
