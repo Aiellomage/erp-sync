@@ -1,0 +1,27 @@
+# Pipeline di partenza: tre stage che girano in ordine.
+# Un job di uno stage parte solo se tutti quelli dello stage precedente sono passati.
+
+stages:
+  - build
+  - test
+  - deploy
+
+build:
+  stage: build
+  image: alpine:3.20
+  script:
+    - echo "Compilo il programma..."
+
+test:
+  stage: test
+  image: alpine:3.20
+  script:
+    - echo "Eseguo i test..."
+
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  script:
+    - echo "Deploy..."
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
