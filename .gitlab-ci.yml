@@ -1,0 +1,43 @@
+# CI pipeline for erp-sync.
+# Jobs of a stage start only when all the jobs of the previous stage have passed.
+
+stages:
+    - build
+    - test
+    - deploy
+
+build:
+    stage: build
+    image: erp-sync-ci:8.5.12
+    variables:
+        # Composer keeps its downloads here: inside the project, so the runner can cache it
+        COMPOSER_CACHE_DIR: .composer-cache
+    cache:
+        # a new cache every time composer.lock changes
+        key:
+            files:
+                - composer.lock
+        paths:
+            - .composer-cache/
+    script:
+        # with the dev dependencies: the test jobs need PHPUnit and php-cs-fixer
+        - composer install --no-interaction --no-progress --prefer-dist
+    artifacts:
+        # the same vendor/ for every job of the pipeline
+        paths:
+            - vendor/
+        expire_in: 1 hour
+
+test:
+    stage: test
+    image: alpine:3.20
+    script:
+        - echo "Running the tests..."
+
+deploy:
+    stage: deploy
+    image: alpine:3.20
+    script:
+        - echo "Deploy..."
+    rules:
+        - if: $CI_COMMIT_BRANCH == "main"
